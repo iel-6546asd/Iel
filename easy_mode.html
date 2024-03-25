@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catching Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 1.2em;
+        margin: 0;
+        padding: 0;
+        background-image: url('fruits.jpg');
+        background-size: cover;
+    }
+
+    #game-container {
+        background-color: rgba(20, 19, 19, 0.605);
+        width: 100%;
+        max-width: 600px;
+        height: 80vh;
+        border: 1px solid black;
+        position: relative;
+        margin: 0 auto;
+    }
+
+    #banner {
+        background-image: url('SS-logo.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        padding-top: 10px;
+        height: 80px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    #basket {
+        width: 10%;
+        max-width: 80px;
+        height: 10%;
+        max-height: 80px;
+        background-image: url('basket.png');
+        background-size: cover;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .fruit {
+        width: 10%;
+        max-width: 40px;
+        height: 10%;
+        max-height: 40px;
+        position: absolute;
+    }
+
+    .fruit1 {
+        background-image: url('apple.png');
+        background-size: cover;
+    }
+
+    .fruit2 {
+        background-image: url('orange.png');
+        background-size: cover;
+    }
+
+    .fruit3 {
+        background-image: url('strawberry.png');
+        background-size: cover;
+    }
+
+    .fruit4 {
+        background-image: url('pomelo.png');
+        background-size: cover;
+    }
+
+    #score {
+        position: absolute;
+        top: 100px;
+        left: 90px;
+        font-size: 2em;
+        color: red;
+        background-color: white;
+    }
+
+    #timer {
+        position: absolute;
+        top: 100px;
+        right: 90px;
+        font-size: 2em;
+        color: green;
+        background-color: white;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 50%;
+        text-align: center;
+    }
+
+    .back-button {
+        display: inline-block;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 50%; 
+        background-color: red; 
+        color: white; 
+        border: none;
+        cursor: pointer; 
+    }
+
+    .back-button:hover {
+        opacity: 0.7; 
+    }
+
+    .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #333; 
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+    }
+
+    .button:hover {
+        background-color: green;
+    }
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<div id="score">Score: 0</div>
+<div id="timer">Time: 01:30</div>
+<div id="game-container">
+    <div id="basket"></div>
+</div>
+
+<div id="myModal" class="modal">
+  <div class="modal-content">
+    <!-- Added an input field for the username -->
+    <input type="text" id="usernameInput" placeholder="Enter username">
+    <button id="saveScoreBtn" class="button">Save Score</button>
+    <!-- Other elements remain the same -->
+  </div>
+</div>
+
+
+<script>
+    const basket = document.getElementById('basket');
+    const gameContainer = document.getElementById('game-container');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const modal = document.getElementById('myModal');
+    const backButton = document.getElementById('backBtn');
+    const nextButton = document.getElementById('nextBtn');
+    const fruits = [];
+    let score = 0;
+    let timeLimit = 90; 
+    const basketSpeed = 10;
+    let timerInterval;
+
+    function startGame() {
+        document.addEventListener('keydown', handleKeyPress);
+        document.addEventListener('mousemove', moveBasketWithMouse);
+        timerInterval = setInterval(updateTimer, 1000);
+        setInterval(updateGame, 100);
+    }
+
+    function updateGame() {
+        createFruit();
+        moveFruits();
+        checkCollision();
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'A') {
+            moveBasket(-basketSpeed);
+        } else if (event.key === 'D') {
+            moveBasket(basketSpeed);
+        }
+    }
+
+    function moveBasketWithMouse(event) {
+        const mouseX = event.clientX;
+        const containerLeft = gameContainer.getBoundingClientRect().left;
+        const containerRight = gameContainer.getBoundingClientRect().right;
+        let newBasketX = mouseX - containerLeft - basket.offsetWidth / 2;
+        newBasketX = Math.max(0, Math.min(containerRight - containerLeft - basket.offsetWidth, newBasketX));
+        basket.style.left = newBasketX + 'px';
+    }
+
+    function moveBasket(speed) {
+        const containerLeft = gameContainer.getBoundingClientRect().left;
+        const containerRight = gameContainer.getBoundingClientRect().right;
+        let newLeft = parseInt(basket.style.left) + speed;
+        newLeft = Math.max(containerLeft, Math.min(containerRight - basket.offsetWidth, newLeft));
+        basket.style.left = newLeft + 'px';
+    }
+    function saveHighScore() {
+        const username = document.getElementById('usernameInput').value; // Get the entered username
+        if (username.trim() === '') {
+            alert('Please enter a username.');
+            return;
+        }
+
+        // Retrieve existing high scores from localStorage
+        let highScores = JSON.parse(localStorage.getItem('highScores')) || {};
+        
+        // Update or set the high score for the username
+        if (highScores[username]) {
+            highScores[username] = Math.max(highScores[username], score);
+        } else {
+            highScores[username] = score;
+        }
+        
+        // Save the updated high scores to localStorage
+        localStorage.setItem('highScores', JSON.stringify(highScores));
+        
+        alert('High score saved for ' + username);
+    }
+
+    function createFruit() {
+        if (Math.random() < 0.02) {
+            const fruit = document.createElement('div');
+            fruit.classList.add('fruit', 'fruit1');
+            fruit.style.left = Math.floor(Math.random() * (gameContainer.offsetWidth - 20)) + 'px';
+            gameContainer.appendChild(fruit);
+            fruits.push(fruit);
+        }
+        if (Math.random() < 0.02) {
+            const fruit = document.createElement('div');
+            fruit.classList.add('fruit', 'fruit2');
+            fruit.style.left = Math.floor(Math.random() * (gameContainer.offsetWidth - 20)) + 'px';
+            gameContainer.appendChild(fruit);
+            fruits.push(fruit);
+        }
+        if (Math.random() < 0.02) {
+            const fruit = document.createElement('div');
+            fruit.classList.add('fruit', 'fruit3');
+            fruit.style.left = Math.floor(Math.random() * (gameContainer.offsetWidth - 20)) + 'px';
+            gameContainer.appendChild(fruit);
+            fruits.push(fruit);
+        }
+        if (Math.random() < 0.02) {
+            const fruit = document.createElement('div');
+            fruit.classList.add('fruit', 'fruit4');
+            fruit.style.left = Math.floor(Math.random() * (gameContainer.offsetWidth - 20)) + 'px';
+            gameContainer.appendChild(fruit);
+            fruits.push(fruit);
+        }
+    }
+
+    function moveFruits() {
+        fruits.forEach(function(fruit) {
+            let top = parseInt(fruit.style.top) || 0;
+            fruit.style.top = top + 20 + 'px';
+        });
+    }
+
+    function checkCollision() {
+        fruits.forEach(function(fruit, index) {
+            if (isColliding(basket, fruit)) {
+                fruit.remove();
+                fruits.splice(index, 1);
+                score++;
+                scoreDisplay.textContent = 'Score: ' + score;
+            }
+        });
+    }
+
+    function isColliding(element1, element2) {
+        const rect1 = element1.getBoundingClientRect();
+        const rect2 = element2.getBoundingClientRect();
+        return !(rect1.right < rect2.left || 
+                 rect1.left > rect2.right || 
+                 rect1.bottom < rect2.top || 
+                 rect1.top > rect2.bottom);
+    }
+
+    function updateTimer() {
+        timeLimit--;
+        if (timeLimit <= 0) {
+            clearInterval(timerInterval);
+            endGame();
+        }
+        const minutes = Math.floor(timeLimit / 60);
+        const seconds = timeLimit % 60;
+        timerDisplay.textContent = 'Time: ' + (minutes < 10 ? '0' + minutes : minutes) + ':' + (seconds < 10 ? '0' + seconds : seconds);
+    }
+
+     function endGame() {
+        modal.style.display = "block";
+        scoreDisplay.textContent = 'Final Score: ' + score;
+        saveScoreBtn.addEventListener('click', saveHighScore); // Listen for save score button click
+    }
+
+    
+    startGame();
+</script>
+
+
+</body>
+</html>
